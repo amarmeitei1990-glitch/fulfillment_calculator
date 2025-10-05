@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Call Fulfillment Calculator</title>
+  <style>
+    :root{
+      --bg:#f0f7ff;
+      --card:#ffffff;
+      --accent1:#3b82f6;
+      --accent2:#10b981;
+      --text:#111827;
+      --muted:#6b7280;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      min-height:100vh;
+      background:linear-gradient(135deg,var(--accent1),var(--accent2));
+      display:flex;align-items:center;justify-content:center;padding:24px;
+      color:var(--text);
+    }
+    .card{
+      width:100%;max-width:540px;
+      background:var(--card);
+      border-radius:18px;
+      padding:30px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.15);
+      text-align:center;
+    }
+    h1{
+      font-size:26px;
+      font-weight:700;
+      background:linear-gradient(90deg,var(--accent1),var(--accent2));
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      margin-bottom:20px;
+    }
+    .grid{display:grid;gap:16px;margin-bottom:22px}
+    label{display:flex;flex-direction:column;font-size:16px;font-weight:500}
+    input[type=number]{margin-top:8px;padding:12px;border-radius:10px;border:1px solid #d1d5db;font-size:16px;text-align:center;transition:all .3s}
+    input[type=number]:focus{outline:none;border-color:var(--accent1);box-shadow:0 0 0 3px rgba(59,130,246,0.3)}
+    .result{font-size:22px;font-weight:700;margin:14px 0;color:var(--text)}
+    .suggest{font-size:17px;color:var(--muted);line-height:1.6;margin:10px 0}
+    .bar-wrap{height:14px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin:16px 0}
+    .bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent2),var(--accent1));transition:width .4s ease}
+    .controls{display:flex;justify-content:center;gap:20px;margin-top:20px}
+    button{
+      padding:10px 24px;
+      font-size:17px;
+      font-weight:600;
+      border-radius:12px;
+      border:none;
+      cursor:pointer;
+      transition:all .3s;
+    }
+    button.clear{
+      background:#fff;
+      color:var(--text);
+      border:2px solid #e5e7eb;
+    }
+    button.clear:hover{
+      border-color:var(--accent1);
+      color:var(--accent1);
+    }
+    button#results{
+      background:linear-gradient(90deg,var(--accent1),var(--accent2));
+      color:#fff;
+      box-shadow:0 4px 10px rgba(59,130,246,0.4);
+    }
+    button#results:hover{
+      opacity:0.9;
+    }
+  </style>
+</head>
+<body>
+  <main class="card" role="main">
+    <h1>Call Fulfillment Calculator</h1>
+
+    <div class="grid">
+      <label>Total calls
+        <input id="total" type="number" min="0" placeholder="">
+      </label>
+      <label>Connected (successful)
+        <input id="connected" type="number" min="0" placeholder="">
+      </label>
+      <label>Failed
+        <input id="failed" type="number" min="0" placeholder="">
+      </label>
+    </div>
+
+    <div class="result">Fulfillment: <span id="fulfillment">0%</span></div>
+    <div id="suggest" class="suggest"></div>
+
+    <div class="bar-wrap" aria-hidden="true">
+      <div id="bar" class="bar" style="width:0%"></div>
+    </div>
+
+    <div class="controls">
+      <button id="clear" class="clear">Clear</button>
+      <button id="results">Results</button>
+    </div>
+  </main>
+
+  <script>
+    (function(){
+      const el = id => document.getElementById(id);
+      const total = el('total');
+      const connected = el('connected');
+      const failed = el('failed');
+      const fulfillment = el('fulfillment');
+      const bar = el('bar');
+      const suggest = el('suggest');
+
+      function clamp(n){return Math.max(0, Math.floor(Number(n) || 0));}
+
+      function neededCalls(t, c, target){
+        const x = Math.ceil((target * t - c) / (1 - target));
+        return Math.max(0, x);
+      }
+
+      function compute(){
+        let t = clamp(total.value);
+        let c = clamp(connected.value);
+        let f = clamp(failed.value);
+
+        if (t === 0){
+          fulfillment.textContent = '0%';
+          bar.style.width = '0%';
+          suggest.textContent = 'Enter your data to calculate fulfilment.';
+          return;
+        }
+
+        if (c > t){ c = t; connected.value = c; }
+        if (c + f !== t){ f = Math.max(0, t - c); failed.value = f; }
+
+        const percent = (c / t) * 100;
+        const pctStr = (Math.round(percent * 100) / 100).toFixed(2) + '%';
+        fulfillment.textContent = pctStr;
+        bar.style.width = Math.max(0, Math.min(100, percent)) + '%';
+
+        const need87 = neededCalls(t, c, 0.87);
+        const need90 = neededCalls(t, c, 0.9);
+
+        suggest.innerHTML = `
+          To reach <b>87%</b>, you need <b>${need87}</b> more connected call${need87===1?'':'s'}.<br>
+          To reach <b>90%</b>, you need <b>${need90}</b> more connected call${need90===1?'':'s'}.`;
+      }
+
+      el('clear').addEventListener('click', ()=>{
+        total.value = '';
+        connected.value = '';
+        failed.value = '';
+        fulfillment.textContent = '0%';
+        bar.style.width = '0%';
+        suggest.textContent = '';
+      });
+
+      el('results').addEventListener('click', compute);
+    })();
+  </script>
+</body>
+</html>
